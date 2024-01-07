@@ -1,5 +1,8 @@
- objs/
- out/
+build/
+build
+Makefile
+objs/
+out/
+dist/
+.vscode/
 
- Makefile
- build
