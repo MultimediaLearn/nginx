@@ -41,7 +41,7 @@ struct ngx_event_s {
      * the event was passed or would be passed to a kernel;
      * in aio mode - operation was posted.
      */
-    unsigned         active:1;
+    unsigned         active:1;      // event 是否处于有效状态
 
     unsigned         disabled:1;
 
@@ -56,8 +56,8 @@ struct ngx_event_s {
     unsigned         eof:1;
     unsigned         error:1;
 
-    unsigned         timedout:1;
-    unsigned         timer_set:1;
+    unsigned         timedout:1;    // timer 是否到期执行完毕
+    unsigned         timer_set:1;   // timer 是否已添加（未执行）
 
     unsigned         delayed:1;
 

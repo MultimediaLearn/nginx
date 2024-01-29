@@ -107,14 +107,13 @@ if pgrep -f "${NGX_TITLE}: master process" > /dev/null; then
     echo "Nginx master process is already running."
     conf_check
     upgrade
-    alive_check 3
 else
     echo "Nginx master process is not running."
     echo "Starting Nginx..."
     conf_check
     ${NGX_PATH} -p .
-    alive_check 3
 fi
+alive_check 1
 
 # 提高 nginx 进程 OOM 分数，减少被kill 概率
 pgrep -f ${NGX_TITLE} | while read PID;do echo -500 > /proc/$PID/oom_score_adj ; done
