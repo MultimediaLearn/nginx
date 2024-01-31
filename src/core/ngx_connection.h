@@ -52,7 +52,7 @@ struct ngx_listening_s {
     ngx_rbtree_t        rbtree;
     ngx_rbtree_node_t   sentinel;
 
-    ngx_uint_t          worker;
+    ngx_uint_t          worker;     // 对应的 worker
 
     unsigned            open:1;
     unsigned            remain:1;
@@ -120,7 +120,7 @@ typedef enum {
 
 
 struct ngx_connection_s {
-    void               *data;
+    void               *data;   // 空闲时，存放下一个 free connection 的指针；使用时，存放module 的数据
     ngx_event_t        *read;
     ngx_event_t        *write;
 
@@ -180,7 +180,7 @@ struct ngx_connection_s {
     unsigned            shared:1;
 
     unsigned            sendfile:1;
-    unsigned            sndlowat:1;
+    unsigned            sndlowat:1;     // sndlowat 是否已经设置
     unsigned            tcp_nodelay:2;   /* ngx_connection_tcp_nodelay_e */
     unsigned            tcp_nopush:2;    /* ngx_connection_tcp_nopush_e */
 
@@ -222,7 +222,9 @@ ngx_int_t ngx_connection_local_sockaddr(ngx_connection_t *c, ngx_str_t *s,
 ngx_int_t ngx_tcp_nodelay(ngx_connection_t *c);
 ngx_int_t ngx_connection_error(ngx_connection_t *c, ngx_err_t err, char *text);
 
+// 获取空闲的 connection
 ngx_connection_t *ngx_get_connection(ngx_socket_t s, ngx_log_t *log);
+// 释放空闲的 connection
 void ngx_free_connection(ngx_connection_t *c);
 
 void ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable);

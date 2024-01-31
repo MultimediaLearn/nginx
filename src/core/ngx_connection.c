@@ -115,7 +115,7 @@ ngx_clone_listening(ngx_cycle_t *cycle, ngx_listening_t *ls)
     for (n = 1; n < ccf->worker_processes; n++) {
 
         /* create a socket for each worker process */
-
+        // 还是放在 cycle 的 listening 结构里面？
         ls = ngx_array_push(&cycle->listening);
         if (ls == NULL) {
             return NGX_ERROR;

@@ -77,6 +77,7 @@ ngx_time_init(void)
 }
 
 
+// 更新 nginx 缓存时间
 void
 ngx_time_update(void)
 {

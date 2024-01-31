@@ -17,6 +17,7 @@ static void ngx_reorder_accept_events(ngx_listening_t *ls);
 static void ngx_close_accepted_connection(ngx_connection_t *c);
 
 
+// 默认的tcp event handler 函数
 void
 ngx_event_accept(ngx_event_t *ev)
 {

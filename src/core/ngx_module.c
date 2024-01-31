@@ -113,7 +113,7 @@ ngx_count_modules(ngx_cycle_t *cycle, ngx_uint_t type)
         }
 
         /* search for some free index */
-
+        // 查找再同类模块中的索引
         module->ctx_index = ngx_module_ctx_index(cycle, type, next);
 
         if (module->ctx_index > max) {

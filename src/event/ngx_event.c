@@ -35,8 +35,8 @@ static void *ngx_event_core_create_conf(ngx_cycle_t *cycle);
 static char *ngx_event_core_init_conf(ngx_cycle_t *cycle, void *conf);
 
 
-static ngx_uint_t     ngx_timer_resolution;
-sig_atomic_t          ngx_event_timer_alarm;
+static ngx_uint_t     ngx_timer_resolution;     // 设定了 timer 分辨率
+sig_atomic_t          ngx_event_timer_alarm;    // timer 事件触发标识
 
 static ngx_uint_t     ngx_event_max_module;
 
@@ -52,7 +52,7 @@ ngx_atomic_t         *ngx_accept_mutex_ptr;
 ngx_shmtx_t           ngx_accept_mutex;
 ngx_uint_t            ngx_use_accept_mutex;
 ngx_uint_t            ngx_accept_events;
-ngx_uint_t            ngx_accept_mutex_held;
+ngx_uint_t            ngx_accept_mutex_held;    // 是否正在持有 accet 锁
 ngx_msec_t            ngx_accept_mutex_delay;
 ngx_int_t             ngx_accept_disabled;
 ngx_uint_t            ngx_use_exclusive_accept;
@@ -83,7 +83,7 @@ static ngx_command_t  ngx_events_commands[] = {
 
     { ngx_string("events"),
       NGX_MAIN_CONF|NGX_CONF_BLOCK|NGX_CONF_NOARGS,
-      ngx_events_block,
+      ngx_events_block,     // 初始化 evnet 相关结构
       0,
       0,
       NULL },
@@ -95,7 +95,7 @@ static ngx_command_t  ngx_events_commands[] = {
 static ngx_core_module_t  ngx_events_module_ctx = {
     ngx_string("events"),
     NULL,
-    ngx_event_init_conf
+    ngx_event_init_conf     // 继续初始化
 };
 
 
@@ -127,6 +127,7 @@ static ngx_command_t  ngx_event_core_commands[] = {
       0,
       NULL },
 
+    // 事件管理机制
     { ngx_string("use"),
       NGX_EVENT_CONF|NGX_CONF_TAKE1,
       ngx_event_use,
@@ -191,6 +192,7 @@ ngx_module_t  ngx_event_core_module = {
 };
 
 
+// event 和 timer 处理
 void
 ngx_process_events_and_timers(ngx_cycle_t *cycle)
 {
@@ -258,7 +260,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         ngx_shmtx_unlock(&ngx_accept_mutex);
     }
 
-    ngx_event_expire_timers();
+    ngx_event_expire_timers();  // 处理所有到时间的 timer
 
     ngx_event_process_posted(cycle, &ngx_posted_events);
 }
@@ -449,11 +451,11 @@ ngx_event_init_conf(ngx_cycle_t *cycle, void *conf)
 
         ls = cycle->listening.elts;
         for (i = 0; i < cycle->listening.nelts; i++) {
-
+            // 逐个复制
             if (!ls[i].reuseport || ls[i].worker != 0) {
                 continue;
             }
-
+            // 复制 listening 端socket 到每个worker进程
             if (ngx_clone_listening(cycle, &ls[i]) != NGX_OK) {
                 return NGX_CONF_ERROR;
             }
@@ -654,10 +656,12 @@ ngx_event_process_init(ngx_cycle_t *cycle)
     ngx_queue_init(&ngx_posted_next_events);
     ngx_queue_init(&ngx_posted_events);
 
+    // 定时器事件管理初始化
     if (ngx_event_timer_init(cycle->log) == NGX_ERROR) {
         return NGX_ERROR;
     }
 
+    // 事件管理初始化
     for (m = 0; cycle->modules[m]; m++) {
         if (cycle->modules[m]->type != NGX_EVENT_MODULE) {
             continue;
@@ -669,6 +673,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
         module = cycle->modules[m]->ctx;
 
+        // 初始化 如 ngx_epoll_init
         if (module->actions.init(cycle, ngx_timer_resolution) != NGX_OK) {
             /* fatal */
             exit(2);
@@ -679,12 +684,13 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #if !(NGX_WIN32)
 
+    // 添加 timer 信号处理和定时器
     if (ngx_timer_resolution && !(ngx_event_flags & NGX_USE_TIMER_EVENT)) {
         struct sigaction  sa;
         struct itimerval  itv;
 
         ngx_memzero(&sa, sizeof(struct sigaction));
-        sa.sa_handler = ngx_timer_signal_handler;
+        sa.sa_handler = ngx_timer_signal_handler;   // timer 事件处理函数
         sigemptyset(&sa.sa_mask);
 
         if (sigaction(SIGALRM, &sa, NULL) == -1) {
@@ -704,6 +710,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         }
     }
 
+    // epoll 不设置，忽略
     if (ngx_event_flags & NGX_USE_FD_EVENT) {
         struct rlimit  rlmt;
 
@@ -733,6 +740,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #endif
 
+    // 初始化链接 和 读、写 事件，数组
     cycle->connections =
         ngx_alloc(sizeof(ngx_connection_t) * cycle->connection_n, cycle->log);
     if (cycle->connections == NULL) {
@@ -764,13 +772,15 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         wev[i].closed = 1;
     }
 
+    // 构建 connection 的free 链表
     i = cycle->connection_n;
     next = NULL;
 
     do {
-        i--;
+        i--;    // 从后向前遍历
 
-        c[i].data = next;
+        c[i].data = next;   // 存放后一个 connection 指针
+        // 读写事件和 connection 一一对应
         c[i].read = &cycle->read_events[i];
         c[i].write = &cycle->write_events[i];
         c[i].fd = (ngx_socket_t) -1;
@@ -778,7 +788,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         next = &c[i];
     } while (i);
 
-    cycle->free_connections = next;
+    cycle->free_connections = next;     // 全都是 free
     cycle->free_connection_n = cycle->connection_n;
 
     /* for each listening socket */
@@ -788,22 +798,26 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #if (NGX_HAVE_REUSEPORT)
         if (ls[i].reuseport && ls[i].worker != ngx_worker) {
+            // 端口重用，只处理当前进程的 socket
             continue;
         }
 #endif
 
+        // 为当前 socket 获取一个 connection
         c = ngx_get_connection(ls[i].fd, cycle->log);
 
         if (c == NULL) {
             return NGX_ERROR;
         }
 
+        // 初始化 connection
         c->type = ls[i].type;
         c->log = &ls[i].log;
 
         c->listening = &ls[i];
         ls[i].connection = c;
 
+        // 初始化读事件
         rev = c->read;
 
         rev->log = c->log;
@@ -957,6 +971,7 @@ ngx_send_lowat(ngx_connection_t *c, size_t lowat)
 }
 
 
+// event 配置存在，首次初始化
 static char *
 ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -994,6 +1009,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         m = cf->cycle->modules[i]->ctx;
 
         if (m->create_conf) {
+            // ctx_index 为索引，创建配置存储
             (*ctx)[cf->cycle->modules[i]->ctx_index] =
                                                      m->create_conf(cf->cycle);
             if ((*ctx)[cf->cycle->modules[i]->ctx_index] == NULL) {
@@ -1015,6 +1031,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return rv;
     }
 
+    // event 所有模块配置解析
     for (i = 0; cf->cycle->modules[i]; i++) {
         if (cf->cycle->modules[i]->type != NGX_EVENT_MODULE) {
             continue;
@@ -1061,6 +1078,7 @@ ngx_event_connections(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+// 事件管理机制预处理
 static char *
 ngx_event_use(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -1093,9 +1111,11 @@ ngx_event_use(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         module = cf->cycle->modules[m]->ctx;
         if (module->name->len == value[1].len) {
             if (ngx_strcmp(module->name->data, value[1].data) == 0) {
+                // 得到索引 和 名称
                 ecf->use = cf->cycle->modules[m]->ctx_index;
                 ecf->name = module->name->data;
 
+                // 校验，不能中途修改
                 if (ngx_process == NGX_PROCESS_SINGLE
                     && old_ecf
                     && old_ecf->use != ecf->use)
@@ -1318,6 +1338,7 @@ ngx_event_core_init_conf(ngx_cycle_t *cycle, void *conf)
 
             if (ngx_strcmp(event_module->name->data, event_core_name.data) == 0)
             {
+                // 排除掉 core module 自己
                 continue;
             }
 

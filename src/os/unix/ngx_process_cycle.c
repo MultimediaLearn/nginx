@@ -28,10 +28,10 @@ static void ngx_cache_manager_process_handler(ngx_event_t *ev);
 static void ngx_cache_loader_process_handler(ngx_event_t *ev);
 
 
-ngx_uint_t    ngx_process;
-ngx_uint_t    ngx_worker;
-ngx_pid_t     ngx_pid;
-ngx_pid_t     ngx_parent;
+ngx_uint_t    ngx_process;      // 当前进程类型
+ngx_uint_t    ngx_worker;       // 当前 worker 的索引
+ngx_pid_t     ngx_pid;          // 当前进程的 id
+ngx_pid_t     ngx_parent;       // 当前进程父进程 id
 
 sig_atomic_t  ngx_reap;
 sig_atomic_t  ngx_sigio;

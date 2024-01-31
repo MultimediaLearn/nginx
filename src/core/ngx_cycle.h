@@ -51,6 +51,7 @@ struct ngx_cycle_s {
 
     ngx_module_t            **modules;
     ngx_uint_t                modules_n;
+    // 当前 cycle 已经初始化，不能再增加新module
     ngx_uint_t                modules_used;    /* unsigned  modules_used:1; */
 
     ngx_queue_t               reusable_connections_queue;

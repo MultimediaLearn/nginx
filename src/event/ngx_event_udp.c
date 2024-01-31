@@ -28,6 +28,7 @@ static ngx_connection_t *ngx_lookup_udp_connection(ngx_listening_t *ls,
     struct sockaddr *local_sockaddr, socklen_t local_socklen);
 
 
+// 默认的udp event handler 函数
 void
 ngx_event_recvmsg(ngx_event_t *ev)
 {

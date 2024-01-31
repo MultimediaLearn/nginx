@@ -220,8 +220,8 @@
 
 
 struct ngx_module_s {
-    ngx_uint_t            ctx_index;
-    ngx_uint_t            index;
+    ngx_uint_t            ctx_index;    // 同类 module 的索引
+    ngx_uint_t            index;        // 全局 module 的索引
 
     char                 *name;
 
@@ -237,9 +237,9 @@ struct ngx_module_s {
 
     ngx_int_t           (*init_master)(ngx_log_t *log);
 
-    ngx_int_t           (*init_module)(ngx_cycle_t *cycle);
+    ngx_int_t           (*init_module)(ngx_cycle_t *cycle);     // master 中调用
 
-    ngx_int_t           (*init_process)(ngx_cycle_t *cycle);
+    ngx_int_t           (*init_process)(ngx_cycle_t *cycle);    // worker 中调用
     ngx_int_t           (*init_thread)(ngx_cycle_t *cycle);
     void                (*exit_thread)(ngx_cycle_t *cycle);
     void                (*exit_process)(ngx_cycle_t *cycle);
@@ -267,6 +267,7 @@ typedef struct {
 ngx_int_t ngx_preinit_modules(void);
 ngx_int_t ngx_cycle_modules(ngx_cycle_t *cycle);
 ngx_int_t ngx_init_modules(ngx_cycle_t *cycle);
+// 计数同类模块最大索引
 ngx_int_t ngx_count_modules(ngx_cycle_t *cycle, ngx_uint_t type);
 
 

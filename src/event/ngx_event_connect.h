@@ -33,6 +33,7 @@ typedef void (*ngx_event_save_peer_session_pt)(ngx_peer_connection_t *pc,
     void *data);
 
 
+// 主动对外链接
 struct ngx_peer_connection_s {
     ngx_connection_t                *connection;
 
