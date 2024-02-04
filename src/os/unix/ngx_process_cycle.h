@@ -13,11 +13,11 @@
 #include <ngx_core.h>
 
 
-#define NGX_CMD_OPEN_CHANNEL   1
-#define NGX_CMD_CLOSE_CHANNEL  2
-#define NGX_CMD_QUIT           3
-#define NGX_CMD_TERMINATE      4
-#define NGX_CMD_REOPEN         5
+#define NGX_CMD_OPEN_CHANNEL   1        // 创建了新的 workder
+#define NGX_CMD_CLOSE_CHANNEL  2        // 关闭了老的 worker
+#define NGX_CMD_QUIT           3        // 父进程通知子进程的信号
+#define NGX_CMD_TERMINATE      4        // 父进程通知子进程的信号
+#define NGX_CMD_REOPEN         5        // 父进程通知子进程的信号
 
 
 #define NGX_PROCESS_SINGLE     0

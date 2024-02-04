@@ -46,7 +46,7 @@ ngx_event_accept(ngx_event_t *ev)
     ecf = ngx_event_get_conf(ngx_cycle->conf_ctx, ngx_event_core_module);
 
     if (!(ngx_event_flags & NGX_USE_KQUEUE_EVENT)) {
-        ev->available = ecf->multi_accept;
+        ev->available = ecf->multi_accept;  // 尽量多 accept
     }
 
     lc = ev->data;
@@ -137,6 +137,7 @@ ngx_event_accept(ngx_event_t *ev)
         (void) ngx_atomic_fetch_add(ngx_stat_accepted, 1);
 #endif
 
+        // accet 阈值控制
         ngx_accept_disabled = ngx_cycle->connection_n / 8
                               - ngx_cycle->free_connection_n;
 
@@ -206,7 +207,7 @@ ngx_event_accept(ngx_event_t *ev)
 
         *log = ls->log;
 
-        c->recv = ngx_recv;
+        c->recv = ngx_recv;  // 宏，对应 ngx_io.recv
         c->send = ngx_send;
         c->recv_chain = ngx_recv_chain;
         c->send_chain = ngx_send_chain;
@@ -311,7 +312,7 @@ ngx_event_accept(ngx_event_t *ev)
         log->data = NULL;
         log->handler = NULL;
 
-        ls->handler(c);
+        ls->handler(c); // 调用 listening 对象的 handler 方法
 
         if (ngx_event_flags & NGX_USE_KQUEUE_EVENT) {
             ev->available--;
@@ -352,6 +353,7 @@ ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
                    "accept mutex lock failed: %ui", ngx_accept_mutex_held);
 
     if (ngx_accept_mutex_held) {
+        // 获取锁失败，状态重置
         if (ngx_disable_accept_events(cycle, 0) == NGX_ERROR) {
             return NGX_ERROR;
         }

@@ -49,12 +49,12 @@ ngx_atomic_t         *ngx_connection_counter = &connection_counter;
 
 
 ngx_atomic_t         *ngx_accept_mutex_ptr;
-ngx_shmtx_t           ngx_accept_mutex;
+ngx_shmtx_t           ngx_accept_mutex;         // 进程间同步锁
 ngx_uint_t            ngx_use_accept_mutex;
 ngx_uint_t            ngx_accept_events;
 ngx_uint_t            ngx_accept_mutex_held;    // 是否正在持有 accet 锁
-ngx_msec_t            ngx_accept_mutex_delay;
-ngx_int_t             ngx_accept_disabled;
+ngx_msec_t            ngx_accept_mutex_delay;   // 获取accept 锁的最长等待时间
+ngx_int_t             ngx_accept_disabled;      // <=0, 不均衡; >0 不再accept
 ngx_uint_t            ngx_use_exclusive_accept;
 
 
@@ -192,7 +192,7 @@ ngx_module_t  ngx_event_core_module = {
 };
 
 
-// event 和 timer 处理
+// event 和 timer 处理核心代码
 void
 ngx_process_events_and_timers(ngx_cycle_t *cycle)
 {
@@ -228,7 +228,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
             }
 
             if (ngx_accept_mutex_held) {
-                flags |= NGX_POST_EVENTS;
+                flags |= NGX_POST_EVENTS;   // 避免长时间占用锁
 
             } else {
                 if (timer == NGX_TIMER_INFINITE
@@ -247,21 +247,26 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
 
     delta = ngx_current_msec;
 
+    // 处理事件，等到下个定时器事件到期 ngx_epoll_process_events
     (void) ngx_process_events(cycle, timer, flags);
 
     delta = ngx_current_msec - delta;
 
+    // 时长统计
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                    "timer delta: %M", delta);
 
+    // 处理延迟的 accept 事件
     ngx_event_process_posted(cycle, &ngx_posted_accept_events);
 
     if (ngx_accept_mutex_held) {
+        // 释放互斥锁，但是没重置 held？
         ngx_shmtx_unlock(&ngx_accept_mutex);
     }
 
     ngx_event_expire_timers();  // 处理所有到时间的 timer
 
+    // 处理延迟的 事件
     ngx_event_process_posted(cycle, &ngx_posted_events);
 }
 
@@ -887,7 +892,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #else
 
-        rev->handler = (c->type == SOCK_STREAM) ? ngx_event_accept
+        rev->handler = (c->type == SOCK_STREAM) ? ngx_event_accept      // 默认读事件，先accept 建连
                                                 : ngx_event_recvmsg;
 
 #if (NGX_HAVE_REUSEPORT)
@@ -1294,7 +1299,7 @@ ngx_event_core_init_conf(ngx_cycle_t *cycle, void *conf)
     module = NULL;
 
 #if (NGX_HAVE_EPOLL) && !(NGX_TEST_BUILD_EPOLL)
-
+    // 测试是否支持 epoll，设定默认事件处理机制
     fd = epoll_create(100);
 
     if (fd != -1) {

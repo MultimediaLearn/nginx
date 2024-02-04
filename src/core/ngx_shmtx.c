@@ -30,6 +30,7 @@ ngx_shmtx_create(ngx_shmtx_t *mtx, ngx_shmtx_sh_t *addr, u_char *name)
 
     mtx->wait = &addr->wait;
 
+    // 0: 线程同步 1: 进程同步
     if (sem_init(&mtx->sem, 1, 0) == -1) {
         ngx_log_error(NGX_LOG_ALERT, ngx_cycle->log, ngx_errno,
                       "sem_init() failed");
@@ -108,6 +109,7 @@ ngx_shmtx_lock(ngx_shmtx_t *mtx)
             ngx_log_debug1(NGX_LOG_DEBUG_CORE, ngx_cycle->log, 0,
                            "shmtx wait %uA", *mtx->wait);
 
+            // 加锁
             while (sem_wait(&mtx->sem) == -1) {
                 ngx_err_t  err;
 
@@ -187,6 +189,7 @@ ngx_shmtx_wakeup(ngx_shmtx_t *mtx)
     ngx_log_debug1(NGX_LOG_DEBUG_CORE, ngx_cycle->log, 0,
                    "shmtx wake %uA", wait);
 
+    // 解锁
     if (sem_post(&mtx->sem) == -1) {
         ngx_log_error(NGX_LOG_ALERT, ngx_cycle->log, ngx_errno,
                       "sem_post() failed while wake shmtx");

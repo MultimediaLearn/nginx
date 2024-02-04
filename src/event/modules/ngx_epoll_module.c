@@ -364,7 +364,7 @@ ngx_epoll_init(ngx_cycle_t *cycle, ngx_msec_t timer)
 
     nevents = epcf->events;
 
-    ngx_io = ngx_os_io;
+    ngx_io = ngx_os_io; // 初始化 ngx_io
 
     ngx_event_actions = ngx_epoll_module_ctx.actions;
 
@@ -797,6 +797,8 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                    "epoll timer: %M", timer);
 
+    // 查找有效事件放到 event_list 中
+    /* nginx 最初运行时，timer 为 -1，即一直等待客户端连接 */
     events = epoll_wait(ep, event_list, (int) nevents, timer);
 
     err = (events == -1) ? ngx_errno : 0;
@@ -825,6 +827,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
     }
 
     if (events == 0) {
+        // 没有有效事件
         if (timer != NGX_TIMER_INFINITE) {
             return NGX_OK;
         }
@@ -834,12 +837,14 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
         return NGX_ERROR;
     }
 
+    // 处理有效事件
     for (i = 0; i < events; i++) {
         c = event_list[i].data.ptr;
 
         instance = (uintptr_t) c & 1;
         c = (ngx_connection_t *) ((uintptr_t) c & (uintptr_t) ~1);
 
+        // 处理读事件
         rev = c->read;
 
         if (c->fd == -1 || rev->instance != instance) {
@@ -882,6 +887,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 #endif
 
         if ((revents & EPOLLIN) && rev->active) {
+            // 处理数据输入事件
 
 #if (NGX_HAVE_EPOLLRDHUP)
             if (revents & EPOLLRDHUP) {
@@ -893,16 +899,18 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
             rev->available = -1;
 
             if (flags & NGX_POST_EVENTS) {
+                // 默认是 accept 接收，accept 后修改该处理数据
                 queue = rev->accept ? &ngx_posted_accept_events
                                     : &ngx_posted_events;
 
                 ngx_post_event(rev, queue);
 
             } else {
-                rev->handler(rev);
+                rev->handler(rev);  // 调用读处理句柄，新链接是 accept
             }
         }
 
+        // 处理写事件
         wev = c->write;
 
         if ((revents & EPOLLOUT) && wev->active) {
@@ -925,10 +933,11 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 #endif
 
             if (flags & NGX_POST_EVENTS) {
+                // 延迟处理
                 ngx_post_event(wev, &ngx_posted_events);
 
             } else {
-                wev->handler(wev);
+                wev->handler(wev);  // 调用写处理句柄
             }
         }
     }

@@ -453,6 +453,7 @@ typedef struct {
 } ngx_event_module_t;
 
 
+// 这里仅仅是声明，去定义处解释
 extern ngx_atomic_t          *ngx_connection_counter;
 
 extern ngx_atomic_t          *ngx_accept_mutex_ptr;

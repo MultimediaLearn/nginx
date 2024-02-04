@@ -10,7 +10,7 @@
 #include <ngx_event.h>
 #include <ngx_channel.h>
 
-
+// 定义信号和处理行为
 typedef struct {
     int     signo;
     char   *signame;
@@ -113,7 +113,7 @@ ngx_spawn_process(ngx_cycle_t *cycle, ngx_spawn_proc_pt proc, void *data,
     if (respawn != NGX_PROCESS_DETACHED) {
 
         /* Solaris 9 still has no AF_LOCAL */
-
+        // 为 worker 创建通信管道
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, ngx_processes[s].channel) == -1)
         {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,

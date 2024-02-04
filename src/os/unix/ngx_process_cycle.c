@@ -421,7 +421,7 @@ ngx_pass_open_channel(ngx_cycle_t *cycle)
                       ngx_processes[i].channel[0]);
 
         /* TODO: NGX_AGAIN */
-
+        // 发送 worker 创建信息给其他 worker
         ngx_write_channel(ngx_processes[i].channel[0],
                           &ch, sizeof(ngx_channel_t), cycle->log);
     }
@@ -585,6 +585,7 @@ ngx_reap_children(ngx_cycle_t *cycle)
 
                     /* TODO: NGX_AGAIN */
 
+                    // 发送 进程退出信息给其他worker 进程
                     ngx_write_channel(ngx_processes[n].channel[0],
                                       &ch, sizeof(ngx_channel_t), cycle->log);
                 }
@@ -897,6 +898,7 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker)
         }
     }
 
+    // 初始化 channel 通信事件
     for (n = 0; n < ngx_last_process; n++) {
 
         if (ngx_processes[n].pid == -1) {
@@ -925,7 +927,7 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker)
 #if 0
     ngx_last_process = 0;
 #endif
-
+    // 添加 channel 处理 handler
     if (ngx_add_channel_event(cycle, ngx_channel, NGX_READ_EVENT,
                               ngx_channel_handler)
         == NGX_ERROR)
@@ -997,6 +999,7 @@ ngx_worker_process_exit(ngx_cycle_t *cycle)
 }
 
 
+// channel 事件处理
 static void
 ngx_channel_handler(ngx_event_t *ev)
 {
@@ -1057,7 +1060,7 @@ ngx_channel_handler(ngx_event_t *ev)
             break;
 
         case NGX_CMD_OPEN_CHANNEL:
-
+            // 添加新 worker 信息
             ngx_log_debug3(NGX_LOG_DEBUG_CORE, ev->log, 0,
                            "get channel s:%i pid:%P fd:%d",
                            ch.slot, ch.pid, ch.fd);
@@ -1073,6 +1076,7 @@ ngx_channel_handler(ngx_event_t *ev)
                            ch.slot, ch.pid, ngx_processes[ch.slot].pid,
                            ngx_processes[ch.slot].channel[0]);
 
+            // 删除 老 worker 信息
             if (close(ngx_processes[ch.slot].channel[0]) == -1) {
                 ngx_log_error(NGX_LOG_ALERT, ev->log, ngx_errno,
                               "close() channel failed");

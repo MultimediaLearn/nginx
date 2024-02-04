@@ -14,6 +14,7 @@
 #include <ngx_event.h>
 
 
+// channel 消息
 typedef struct {
     ngx_uint_t  command;
     ngx_pid_t   pid;

@@ -94,6 +94,7 @@ ngx_count_modules(ngx_cycle_t *cycle, ngx_uint_t type)
         module = cycle->modules[i];
 
         if (module->type != type) {
+            // 只关心指定类别模块
             continue;
         }
 
